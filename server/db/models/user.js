@@ -1,70 +1,71 @@
-const crypto = require('crypto')
-const Sequelize = require('sequelize')
-const db = require('../db')
+const Sequelize = require("sequelize");
+const db = require("../db");
+const bcrypt = require("bcrypt");
 
-const User = db.define('user', {
+const User = db.define("user", {
+  firstName: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: {
+        args: true,
+        msg: "Name must be required",
+      },
+      isAlpha: {
+        args: true,
+        msg: "name most only contain letters",
+      },
+      len: {
+        args: [2, 15],
+        msg: "Name must be between 2 and 15 cahracters",
+      },
+    },
+  },
+  lastName: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    validate: {
+      notEmpty: {
+        args: true,
+        msg: "Name must be required",
+      },
+      isAlpha: {
+        args: true,
+        msg: "name most only contain letters",
+      },
+      len: {
+        args: [2, 15],
+        msg: "Name must be between 2 and 15 cahracters",
+      },
+    },
+  },
   email: {
     type: Sequelize.STRING,
-    unique: true,
-    allowNull: false
+    validate: {
+      isEmail: true,
+    },
   },
   password: {
     type: Sequelize.STRING,
-    // Making `.password` act like a func hides it when serializing to JSON.
-    // This is a hack to get around Sequelize's lack of a "private" option.
-    get() {
-      return () => this.getDataValue('password')
-    }
-  },
-  salt: {
-    type: Sequelize.STRING,
-    // Making `.salt` act like a function hides it when serializing to JSON.
-    // This is a hack to get around Sequelize's lack of a "private" option.
-    get() {
-      return () => this.getDataValue('salt')
-    }
   },
   googleId: {
-    type: Sequelize.STRING
-  }
-})
+    type: Sequelize.STRING,
+  },
+});
 
-module.exports = User
+module.exports = User;
 
-/**
- * instanceMethods
- */
-User.prototype.correctPassword = function(candidatePwd) {
-  return User.encryptPassword(candidatePwd, this.salt()) === this.password()
-}
+// User.beforeCreate((user, options) => {
+//   return bcrypt.hash(user.password, 10)
+//       .then(hash => {
+//           user.password = hash;
+//       })
+// });
 
-/**
- * classMethods
- */
-User.generateSalt = function() {
-  return crypto.randomBytes(16).toString('base64')
-}
+User.beforeCreate((user, options) => {
+  const firstName = user.firstName;
+  const lastName = user.lastName;
 
-User.encryptPassword = function(plainText, salt) {
-  return crypto
-    .createHash('RSA-SHA256')
-    .update(plainText)
-    .update(salt)
-    .digest('hex')
-}
-
-/**
- * hooks
- */
-const setSaltAndPassword = user => {
-  if (user.changed('password')) {
-    user.salt = User.generateSalt()
-    user.password = User.encryptPassword(user.password(), user.salt())
-  }
-}
-
-User.beforeCreate(setSaltAndPassword)
-User.beforeUpdate(setSaltAndPassword)
-User.beforeBulkCreate(users => {
-  users.forEach(setSaltAndPassword)
-})
+  user.firstName = firstName[0].toUpperCase() + firstName.slice(1);
+  user.lastName = lastName[0].toUpperCase() + lastName.slice(1);
+});
